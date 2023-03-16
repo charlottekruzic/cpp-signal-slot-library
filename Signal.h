@@ -3,8 +3,10 @@
 
 #include <optional>
 #include <functional>
-#include <unordered_map>
+#include <map>
 #include <vector>
+
+#include <cstdio> //To remove
 
 
 namespace sig
@@ -97,16 +99,17 @@ namespace sig
 		using signature_type = R(Args...);
 
 		Signal(Combiner combiner = Combiner())
-			: m_combiner(combiner), m_next_id(0)
+			: m_combiner(combiner), m_id(0)
 		{
 		}
 		
 		std::size_t connectSlot(std::function<signature_type> callback)
 		{
-			std::size_t id = m_next_id;
+			std::size_t id = m_id;
+			fprintf(stderr,"connectSlot : %ld\n",id);
 			m_slots.emplace(id, callback);
 			/*m_slots[id] = callback;*/
-			m_next_id++;
+			m_id++;
 			return id;
 		}
 
@@ -116,31 +119,33 @@ namespace sig
 		}
 		
 		template <typename U = Combiner>
-		std::enable_if_t<!std::is_same_v<U, DiscardCombiner>, typename Combiner::result_type>
-		emitSignal(Args... args)
+		std::enable_if_t<!std::is_same_v<U, Combiner>, typename Combiner::result_type> emitSignal(Args... args)
 		{
 			typename Combiner::result_type result = m_combiner.result();
 			for (auto& slot : m_slots)
 			{
+				fprintf(stderr,"emitSignal : %ld\n",result);
 				result = m_combiner.combine(result, slot.second(args...));
 			}
 			return result;
 		}
 
 		template <typename U = Combiner>
-		std::enable_if_t<std::is_same_v<U, DiscardCombiner>, void>
-		emitSignal(Args... args)
+		std::enable_if_t<std::is_same_v<U, DiscardCombiner>, void> emitSignal(Args... args)
 		{
+			//constexpr if(is_void()==)
 			for (auto& slot : m_slots)
 			{
+				fprintf(stderr,"laaa\n");
+				//fprintf(stderr,"emitSignal void : %ld\n",id);
 				slot.second(args...);
 			}
 		}
 
 	private:
 		combiner_type m_combiner;
-		std::unordered_map<std::size_t, std::function<signature_type>> m_slots;
-		std::size_t m_next_id;
+		std::map<std::size_t, std::function<signature_type>> m_slots;
+		std::size_t m_id;
 	};
 
 }
