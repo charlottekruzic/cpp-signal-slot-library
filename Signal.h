@@ -118,7 +118,7 @@ namespace sig
 			m_slots.erase(id);
 		}
 		
-		template <typename U = Combiner>
+		/*template <typename U = Combiner>
 		std::enable_if_t<!std::is_same_v<U, Combiner>, typename Combiner::result_type> emitSignal(Args... args)
 		{
 			typename Combiner::result_type result = m_combiner.result();
@@ -133,6 +133,7 @@ namespace sig
 		template <typename U = Combiner>
 		std::enable_if_t<std::is_same_v<U, DiscardCombiner>, void> emitSignal(Args... args)
 		{
+			
 			//constexpr if(is_void()==)
 			for (auto& slot : m_slots)
 			{
@@ -140,7 +141,28 @@ namespace sig
 				//fprintf(stderr,"emitSignal void : %ld\n",id);
 				slot.second(args...);
 			}
+		}*/
+
+		result_type emitSignal(Args... args) {
+		if constexpr (std::is_void_v<result_type>) {
+			// code si retourne void
+			for (auto& slot : m_slots) {
+				slot.second(args...);
+			}
 		}
+		if constexpr (!std::is_void_v<result_type>) {
+			
+			// code si ne retourne pas void
+			typename Combiner::result_type result = m_combiner.result();
+			for (auto& slot : m_slots) {
+				m_combiner.combine(slot.second(args...));
+				result = m_combiner.result();
+			}
+			return result;
+		}
+	}
+
+
 
 	private:
 		combiner_type m_combiner;
