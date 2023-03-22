@@ -436,6 +436,38 @@ TEST(VectorCombiner, returnTypeVoid)
 
 
 
+void print(int x) {
+    std::cout << "Hello " << x << std::endl;
+}
+
+void square(int x) {
+    std::cout << "Square of " << x << " is " << x*x << std::endl;
+}
+
+TEST(VectorCombiner, test)
+{
+    // test discard combiner
+    sig::Signal<void(int), sig::DiscardCombiner> sig1;
+    sig1.connectSlot(print);
+    sig1.emitSignal(1); // "Hello 1"
+
+    // test last combiner
+    sig::Signal<void(int), sig::LastCombiner<void>> sig2;
+    sig2.connectSlot(print);
+    sig2.connectSlot(square);
+    sig2.emitSignal(2); // "Hello 2"  "Square of 2 is 4"
+
+    // test vector combiner
+    sig::Signal<void(int), sig::VectorCombiner<void>> sig3;
+    sig3.connectSlot(square);
+    sig3.connectSlot(print);
+    sig3.emitSignal(3); //"Square of 3 is 9"  "Hello 3"
+
+    //add tests
+
+}
+
+
 
 
 
