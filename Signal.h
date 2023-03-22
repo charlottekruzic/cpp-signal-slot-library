@@ -40,7 +40,7 @@ namespace sig
 	class LastCombiner
 	{
 	public:
-		using result_type = std::optional<T>;
+		using result_type = T; //std::optional<T>;
 
 		template <typename U>
 		void combine(U item)
@@ -56,6 +56,25 @@ namespace sig
 	private:
 		result_type m_lastResult;
 	};
+
+	//type void
+	template <>
+	class LastCombiner<void>
+	{
+	public:
+		using result_type = void;
+
+		template <typename U>
+		void combine(U item)
+		{
+		}
+
+		void result()
+		{
+			return result_type();// do nothing
+		}
+	};
+
 
 	/*******************************************************************************
 	 *                               VectorCombiner
@@ -81,6 +100,26 @@ namespace sig
 	private:
 		result_type m_all_results;
 	};
+
+	//type void
+	template <>
+	class VectorCombiner<void>
+	{
+	public:
+		using result_type = void;
+
+		template <typename T>
+		void combine(T item)
+		{
+			// do nothing
+		}
+
+		result_type result()
+		{
+			return result_type();// do nothing
+		}
+	};
+
 
 	/*******************************************************************************
 	 *                               Signal

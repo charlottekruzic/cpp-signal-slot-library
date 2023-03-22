@@ -4,6 +4,7 @@
 #include <vector>
 
 
+
 /***************************************************************************************
  *                                  DiscardCombiner
 ***************************************************************************************/
@@ -285,20 +286,152 @@ TEST(SignalTest, TestSubject)
  *                               LastCombiner
 *******************************************************************************/
 
-/*TEST(LastCombiner, test)
+int callback_6()
 {
-    sig::Signal<void(int), sig::LastCombiner<int>> sig;
-    int res = 0;
-    std::size_t id1 = sig.connectSlot([&res](int x){ res = x+1; });
-    sig.emitSignal(1);
-    EXPECT_EQ(res,1);
+    return 1;
+}
+
+TEST(lastCombiner, OneSlot)
+{
+    sig::Signal<int() , sig::LastCombiner<int>> signal;
+    signal.connectSlot(&callback_6);
+    auto res = signal.emitSignal();
+    EXPECT_EQ(res, 1);
+}
+
+int callback_7()
+{
+    return 2;
+}
+
+int callback_8()
+{
+    return 3;
+}
+
+TEST(lastCombiner, OnlyLast)
+{
+    sig::Signal<int() , sig::LastCombiner<int>> signal;
+    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_7);
+    signal.connectSlot(&callback_8);
+    auto res = signal.emitSignal();
+    EXPECT_EQ(res, 3);
+}
+
+TEST(lastCombiner, NoSlot)
+{
+    sig::Signal<int() , sig::LastCombiner<int>> signal;
+    auto res = signal.emitSignal();
+    EXPECT_EQ(res, 0);//revoir
+}
+
+TEST(lastCombiner, LastOneSameToFirst)
+{
+    sig::Signal<int() , sig::LastCombiner<int>> signal;
+    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_7);
+    signal.connectSlot(&callback_6);
+    auto res = signal.emitSignal();
+    EXPECT_EQ(res, 1);
+}
+
+/*char callback_9()
+{
+    return 'a';
+}
+
+TEST(lastCombiner, DifferentOutputType) //Revoir
+{
+    sig::Signal<int() , sig::LastCombiner<int>> signal;
+    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_9);
+    auto res = signal.emitSignal();
+    EXPECT_EQ(res, 1);
 }*/
 
 
 /**
- * Connect function test
+ * void return test
 */
 
+//sig::Signal<void(int), sig::LastCombiner<int>> sig;
+
+TEST(LastCombiner, returnTypeVoid)
+{
+    sig::Signal<void(int), sig::LastCombiner<void>> sig;
+    int res = 0;
+    std::size_t id1 = sig.connectSlot([&res](int x){ res = x+1; });
+    sig.emitSignal(1);
+    EXPECT_EQ(res,2);
+}
+
+
+/*******************************************************************************
+ *                               VectorCombiner
+*******************************************************************************/
+
+/**
+ * void return test
+*/
+TEST(vectorCombiner, OneSlot)
+{
+    sig::Signal<int() , sig::VectorCombiner<int>> signal;
+    signal.connectSlot(&callback_6);
+
+    auto res = signal.emitSignal();
+    std::vector<int> expect = {1};
+    EXPECT_EQ(res, expect);
+}
+
+TEST(vectorCombiner, MultipleSlot)
+{
+    sig::Signal<int(), sig::VectorCombiner<int>> signal;
+    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_7);
+    signal.connectSlot(&callback_8);
+
+    std::vector<int> expect = {1, 2, 3};
+    std::vector<int> actual_results = signal.emitSignal();
+
+    EXPECT_EQ(actual_results, expect);
+}
+
+
+
+TEST(vectorCombiner, NoSlot)
+{
+    sig::Signal<int() , sig::VectorCombiner<int>> signal;
+    auto res = signal.emitSignal();
+    std::vector<int> expect;
+    EXPECT_EQ(res, expect);//revoir
+}
+
+TEST(vectorCombiner, SameTwoTime)
+{
+    sig::Signal<int() , sig::VectorCombiner<int>> signal;
+    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_7);
+    signal.connectSlot(&callback_6);
+    auto res = signal.emitSignal();
+    std::vector<int> expect = {1, 2, 1};
+    EXPECT_EQ(res, expect);
+}
+
+TEST(VectorCombiner, returnTypeVoid)
+{
+    sig::Signal<void(int), sig::VectorCombiner<void>> sig;
+    std::vector<int> res;
+    sig.connectSlot([&res](int x){ res.push_back(x); });
+    sig.emitSignal(1);
+    sig.emitSignal(2);
+    sig.emitSignal(3);
+
+    EXPECT_EQ(res.size(), 3);
+    EXPECT_EQ(res[0], 1);
+    EXPECT_EQ(res[1], 2);
+    EXPECT_EQ(res[2], 3);
+}
 
 
 
@@ -324,8 +457,8 @@ TEST(SignalTest, TestSubject)
 
 
 
-
-//test différents signaux
+//tester avec fonction qui renvoie mauvais trucs
+//test différents signaux en meme temps
 //différentes args 
 //test args (char)...
 //faire int(int)

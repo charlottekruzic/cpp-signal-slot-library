@@ -1,0 +1,3 @@
+- on retourne quoi pour last et vector quand il n'y a pas de fonctions connectée ?
+- on fait quoi si la fonction ajouté a le mauvais type de retour ?
+- U est converti en T on doit vérifier ?
