@@ -40,17 +40,17 @@ namespace sig
 	class LastCombiner
 	{
 	public:
-		using result_type = T; //std::optional<T>;
+		using result_type = T;
 
 		template <typename U>
 		void combine(U item)
 		{
-			m_lastResult = item;
+			m_lastResult = std::move(item);
 		}
 
 		result_type result()
 		{
-			return m_lastResult;
+			return std::move(m_lastResult);
 		}
 
 	private:
@@ -67,6 +67,7 @@ namespace sig
 		template <typename U>
 		void combine(U item)
 		{
+			// do nothing
 		}
 
 		void result()
@@ -79,7 +80,7 @@ namespace sig
 	/*******************************************************************************
 	 *                               VectorCombiner
 	 *******************************************************************************/
-
+	//faire class pour faire heritage
 	template <typename T>
 	class VectorCombiner
 	{
@@ -94,7 +95,7 @@ namespace sig
 
 		result_type result()
 		{
-			return m_all_results;
+			return std::move(m_all_results);
 		}
 
 	private:
@@ -138,7 +139,7 @@ namespace sig
 		using signature_type = R(Args...);
 
 		Signal(Combiner combiner = Combiner())
-			: m_combiner(combiner), m_id(0)
+			: m_combiner(std::move(combiner)), m_id(0)
 		{
 		}
 		
@@ -192,12 +193,10 @@ namespace sig
 		if constexpr (!std::is_void_v<result_type>) {
 			
 			// code si ne retourne pas void
-			typename Combiner::result_type result = m_combiner.result();
 			for (auto& slot : m_slots) {
-				m_combiner.combine(slot.second(args...));
-				result = m_combiner.result();
+				m_combiner.combine(slot.second(std::forward<Args>(args)...));
 			}
-			return result;
+			return m_combiner.result();
 		}
 	}
 

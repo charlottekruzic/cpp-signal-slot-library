@@ -1,4 +1,7 @@
 - on retourne quoi pour last et vector quand il n'y a pas de fonctions connectée ?
+    vector vide     et     autre indéfini
 - on fait quoi si la fonction ajouté a le mauvais type de retour ?
+    defois ca compile defois non        
 - U est converti en T on doit vérifier ?
+    si ca compile oui sinon non
 - m_lastResult doit quand meme stocker le résultat si c'est vide ?

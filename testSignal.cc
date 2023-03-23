@@ -4,14 +4,54 @@
 #include <vector>
 
 
+void callback_1(int& res)
+{
+    res = 1;
+}
 
-/***************************************************************************************
- *                                  DiscardCombiner
-***************************************************************************************/
+void callback_2(int& counter) {
+    ++counter;
+}
+
+int callback_3()
+{
+    return 1;
+}
+
+int callback_4()
+{
+    return 2;
+}
+
+int callback_5()
+{
+    return 3;
+}
+char callback_6()
+{
+    return 'a';
+}
+
+char callback_7()
+{
+    return 'b';
+}
+
+int callback_8()
+{
+    return 97;
+}
+
+char callback_9()
+{
+    return 98;
+}
 
 /**
- * ID uniqueness tests
+ * Connect slots tests
 */
+
+//ID uniqueness test
 TEST(connectSlot, UniqueID)
 {
     sig::Signal<void()> signal;
@@ -25,15 +65,9 @@ TEST(connectSlot, UniqueID)
     EXPECT_NE(id3, id1);
 }
 
-/**
- * Connect function test
-*/
-void callback_1(int& res)
-{
-    res = 1;
-}
+//Connect function test
 
-TEST(SignalTest, ConnectFunction)
+TEST(connectSlot, ConnectFunction)
 {
     sig::Signal<void(int&)> signal;
     int res = 0;
@@ -43,15 +77,10 @@ TEST(SignalTest, ConnectFunction)
 }
 
 
+//Connect same function test
 
-/**
- * Connect same function test
-*/
-void callback_2(int& counter) {
-    ++counter;
-}
 
-TEST(SignalTest, ConnectSameFunctionTwice) {
+TEST(connectSlot, ConnectSameFunctionTwice) {
     sig::Signal<void(int&)> signal;
     int counter = 0;
     signal.connectSlot(&callback_2);
@@ -60,11 +89,8 @@ TEST(SignalTest, ConnectSameFunctionTwice) {
     EXPECT_EQ(counter, 2);
 }
 
-
-/**
- * Connect lambda test
-*/
-TEST(SignalTest, connectLambda)
+//Connect lambda test
+TEST(connectSlot, connectLambda)
 {
     sig::Signal<void(int)> signal;
     int res = 0;
@@ -73,11 +99,8 @@ TEST(SignalTest, connectLambda)
     EXPECT_EQ(res, 20);
 }
 
-
-/**
- * Connect object test ?
-*/
-class TestClass
+//Connect object test
+class MyClass
 {
 public:
     void callback_class(int signal) { res = signal + 2; }
@@ -87,17 +110,18 @@ public:
 TEST(connectSlot, ObjectSlot)
 {
     sig::Signal<void(int)> sig;
-    TestClass obj;
-    sig.connectSlot(std::bind(&TestClass::callback_class, &obj, std::placeholders::_1));
+    MyClass obj;
+    sig.connectSlot(std::bind(&MyClass::callback_class, &obj, std::placeholders::_1));
     sig.emitSignal(4);
     EXPECT_EQ(obj.res, 6);
 }
 
 
-
 /**
  * Disconnect slots tests
 */
+
+//Disconnect one slot
 TEST (disconnectSlot, One) {
     sig::Signal<void(int)> signal;
    
@@ -121,6 +145,7 @@ TEST (disconnectSlot, One) {
 
 }
 
+//Disconnect all slots
 TEST (disconnectSlot, All) {
     sig::Signal<void(char)> signal;
    
@@ -142,6 +167,7 @@ TEST (disconnectSlot, All) {
     EXPECT_EQ(res2,4);
 }
 
+//Disconnecting one slot after another test
 TEST (disconnectSlot, KeepOtherAccess) {
     sig::Signal<void(int)> signal;
    
@@ -167,14 +193,35 @@ TEST (disconnectSlot, KeepOtherAccess) {
 
 
 /**
- * Multiple args type
+ * Emit signal tests
 */
-TEST(signalTest, multipleArgsType) {
+
+//Emit without slot connected test and compile
+TEST(emitSignal, NoSlotsConnected)
+{
+    sig::Signal<void()> sig;
+    sig.emitSignal();
+}
+
+
+//Passing arguments by reference test
+TEST(emitSignal, RefArgument)
+{
+    sig::Signal<void(int&)> sig;
+    sig.connectSlot([](int& x) { x = x*2;});
+
+    int arg = 42;
+    sig.emitSignal(arg);
+
+    EXPECT_EQ(arg, 84);
+}
+
+//Multiple args type
+TEST(emitSignal, multipleArgsType) {
     sig::Signal<void(int,char)> signal;
 
     std::vector<int> ints;
     std::vector<char> chars;
-    //std::vector<int,char> ints_chars;
 
     signal.connectSlot([&ints, &chars](int i, char c){ ints.push_back(i); chars.push_back(c);});
     signal.connectSlot([&ints, &chars](int i, char c){ ints.push_back(i*2); chars.push_back(c+1);});
@@ -191,10 +238,8 @@ TEST(signalTest, multipleArgsType) {
     EXPECT_EQ(chars[1], 'b');
 }
 
-/**
- * Vector args type
-*/
-TEST(connectSlot, LambdaWithVector)
+//Vector args type
+TEST(emitSignal, LambdaWithVector)
 {
     sig::Signal<void(std::vector<int>)> sig;
     std::vector<int> v = {1, 2, 3};
@@ -210,61 +255,16 @@ TEST(connectSlot, LambdaWithVector)
     EXPECT_EQ(sum, 6);
 }
 
-/**
- * Emit without slot connected test
-*/
-TEST(emitSignal, NoSlotsConnected)
-{
-    sig::Signal<void()> sig;
-    EXPECT_NO_THROW(sig.emitSignal());
-}
-
-TEST(Signal, EmitNoConnectedSlot)
-{
-    sig::Signal<void(int)> sig;
-    EXPECT_NO_THROW(sig.emitSignal(42));
-}
 
 /**
- * passing arguments by reference test
-*/
-TEST(connectSlot, RefArgument)
-{
-    sig::Signal<void(int&)> sig;
-    int value = 0;
-    sig.connectSlot([&value](int& x) { value = x;});
-
-    int arg = 42;
-    sig.emitSignal(arg);
-
-    EXPECT_EQ(value, arg);
-}
-
-/**
- * passing pointer test
-*/
-
-
-/**
- * Priority of slots test
-*/
-
-
-
-
-//tests multiple et bon ordre
-
-
-
-/**
- * project statement test
+ * Project statement test
 */
 void callback(int param)
 {
 	printf("Hello %i\n", param);
 }
 
-TEST(SignalTest, TestSubject)
+TEST(emitSignal, TestSubject)
 {
 	// define a signal for functions that takes an int
 	// and returns void
@@ -282,114 +282,132 @@ TEST(SignalTest, TestSubject)
 }
 
 
-/*******************************************************************************
- *                               LastCombiner
-*******************************************************************************/
+/**
+ * LastCombiner tests
+*/
 
-int callback_6()
-{
-    return 1;
-}
-
+//Connect one slot and emit signal
 TEST(lastCombiner, OneSlot)
 {
     sig::Signal<int() , sig::LastCombiner<int>> signal;
-    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_3);
     auto res = signal.emitSignal();
     EXPECT_EQ(res, 1);
 }
 
-int callback_7()
-{
-    return 2;
-}
 
-int callback_8()
-{
-    return 3;
-}
 
+//Connect many slots and keep the result of the last only
 TEST(lastCombiner, OnlyLast)
 {
     sig::Signal<int() , sig::LastCombiner<int>> signal;
-    signal.connectSlot(&callback_6);
-    signal.connectSlot(&callback_7);
-    signal.connectSlot(&callback_8);
+    signal.connectSlot(&callback_3);
+    signal.connectSlot(&callback_4);
+    signal.connectSlot(&callback_5);
     auto res = signal.emitSignal();
     EXPECT_EQ(res, 3);
 }
 
+//Connect no slot and can compile
 TEST(lastCombiner, NoSlot)
 {
-    sig::Signal<int() , sig::LastCombiner<int>> signal;
-    auto res = signal.emitSignal();
-    EXPECT_EQ(res, 0);//revoir
+    sig::Signal<int(int) , sig::LastCombiner<int>> signal;
+    signal.emitSignal(3);
 }
 
+//Connect two same slots and keep the last
 TEST(lastCombiner, LastOneSameToFirst)
 {
     sig::Signal<int() , sig::LastCombiner<int>> signal;
-    signal.connectSlot(&callback_6);
-    signal.connectSlot(&callback_7);
-    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_3);
+    signal.connectSlot(&callback_4);
+    signal.connectSlot(&callback_3);
     auto res = signal.emitSignal();
     EXPECT_EQ(res, 1);
 }
 
-/*char callback_9()
-{
-    return 'a';
-}
-
-TEST(lastCombiner, DifferentOutputType) //Revoir
+//Connect two same slots with different output types
+TEST(lastCombiner, DifferentOutputType)
 {
     sig::Signal<int() , sig::LastCombiner<int>> signal;
+    signal.connectSlot(&callback_3);
     signal.connectSlot(&callback_6);
-    signal.connectSlot(&callback_9);
     auto res = signal.emitSignal();
-    EXPECT_EQ(res, 1);
-}*/
+    EXPECT_EQ(res, 97);
+}
 
 
-/**
- * void return test
-*/
-
-//sig::Signal<void(int), sig::LastCombiner<int>> sig;
+//LastCombiner with void type
 
 TEST(LastCombiner, returnTypeVoid)
 {
     sig::Signal<void(int), sig::LastCombiner<void>> sig;
     int res = 0;
-    std::size_t id1 = sig.connectSlot([&res](int x){ res = x+1; });
+    sig.connectSlot([&res](int x){ res = x+1; });
     sig.emitSignal(1);
     EXPECT_EQ(res,2);
 }
 
 
-/*******************************************************************************
- *                               VectorCombiner
-*******************************************************************************/
+//Tests the mix of different compatible types between signal and slots
+TEST(lastCombiner, ReturnIntWithCharSlot)
+{
+    sig::Signal<int() , sig::LastCombiner<int>> signal;
+    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_7);
+    auto res = signal.emitSignal();
+    EXPECT_EQ(res, 98);
+}
+
+TEST(lastCombiner, ReturnCharWithIntSlot)
+{
+    sig::Signal<char() , sig::LastCombiner<char>> signal;
+    signal.connectSlot(&callback_8);
+    signal.connectSlot(&callback_9);
+    auto res = signal.emitSignal();
+    EXPECT_EQ(res, 'b');
+}
+
+TEST(lastCombiner, CharCombinerWithIntSignal)
+{
+    sig::Signal<int() , sig::LastCombiner<char>> signal;
+    signal.connectSlot(&callback_8);
+    signal.connectSlot(&callback_9);
+    auto res = signal.emitSignal();
+    EXPECT_EQ(res, 'b');
+}
+
+TEST(lastCombiner, IntSignalWithCharSlot)
+{
+    sig::Signal<int() , sig::LastCombiner<char>> signal;
+    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_7);
+    auto res = signal.emitSignal();
+    EXPECT_EQ(res, 'b');
+}
 
 /**
- * void return test
+ * VectorCombiner tests
 */
+
+//Connect one slot and emit signal
 TEST(vectorCombiner, OneSlot)
 {
     sig::Signal<int() , sig::VectorCombiner<int>> signal;
-    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_3);
 
     auto res = signal.emitSignal();
     std::vector<int> expect = {1};
     EXPECT_EQ(res, expect);
 }
 
+//Connect many slots and keep them all
 TEST(vectorCombiner, MultipleSlot)
 {
     sig::Signal<int(), sig::VectorCombiner<int>> signal;
-    signal.connectSlot(&callback_6);
-    signal.connectSlot(&callback_7);
-    signal.connectSlot(&callback_8);
+    signal.connectSlot(&callback_3);
+    signal.connectSlot(&callback_4);
+    signal.connectSlot(&callback_5);
 
     std::vector<int> expect = {1, 2, 3};
     std::vector<int> actual_results = signal.emitSignal();
@@ -397,27 +415,28 @@ TEST(vectorCombiner, MultipleSlot)
     EXPECT_EQ(actual_results, expect);
 }
 
-
-
+//Connect no slot and returns an empty vector
 TEST(vectorCombiner, NoSlot)
 {
     sig::Signal<int() , sig::VectorCombiner<int>> signal;
     auto res = signal.emitSignal();
     std::vector<int> expect;
-    EXPECT_EQ(res, expect);//revoir
+    EXPECT_EQ(res, expect);
 }
 
+//Connect two same slots and return its two times
 TEST(vectorCombiner, SameTwoTime)
 {
     sig::Signal<int() , sig::VectorCombiner<int>> signal;
-    signal.connectSlot(&callback_6);
-    signal.connectSlot(&callback_7);
-    signal.connectSlot(&callback_6);
+    signal.connectSlot(&callback_3);
+    signal.connectSlot(&callback_4);
+    signal.connectSlot(&callback_3);
     auto res = signal.emitSignal();
     std::vector<int> expect = {1, 2, 1};
     EXPECT_EQ(res, expect);
 }
 
+//VectorCombiner with void type
 TEST(VectorCombiner, returnTypeVoid)
 {
     sig::Signal<void(int), sig::VectorCombiner<void>> sig;
@@ -427,13 +446,98 @@ TEST(VectorCombiner, returnTypeVoid)
     sig.emitSignal(2);
     sig.emitSignal(3);
 
-    EXPECT_EQ(res.size(), 3);
+    EXPECT_EQ(res.size(), 3u);
     EXPECT_EQ(res[0], 1);
     EXPECT_EQ(res[1], 2);
     EXPECT_EQ(res[2], 3);
 }
 
 
+std::unique_ptr<int> callback_10(){
+    auto ptr = std::make_unique<int>(10);
+    return ptr;
+}
+
+std::unique_ptr<int> callback_11(){
+    auto ptr = std::make_unique<int>(11);
+    return ptr;
+}
+
+/**
+ * No-copy tests
+*/
+
+TEST(noCopy, OutputTypeVectorCombiner)
+{
+    sig::Signal<std::unique_ptr<int>(), sig::VectorCombiner<std::unique_ptr<int>>> signal;
+    signal.connectSlot(&callback_10);
+    signal.connectSlot(&callback_11);
+
+    std::vector<std::unique_ptr<int>> expect;
+    expect.push_back(std::make_unique<int>(10));
+    expect.push_back(std::make_unique<int>(11));
+    std::vector<std::unique_ptr<int>> actual_results = signal.emitSignal();
+
+    EXPECT_EQ(*actual_results[0].get(), *expect[0].get());
+    EXPECT_EQ(*actual_results[1].get(), *expect[1].get());
+}
+
+int callback_12(std::unique_ptr<int> ptr){
+    int value = *ptr.get()*5;
+    return value;
+}
+
+int callback_13(std::unique_ptr<int> ptr){
+    int value = *ptr.get()*6; //deja déplacé ca ne peux pas marcher
+    return value;
+} 
+
+//Faire sa propre structure avec un int et interdire la copie pour tester
+
+TEST(noCopy, InputTypeLastCombiner)
+{
+    sig::Signal<int(std::unique_ptr<int>), sig::VectorCombiner<int>> signal;
+    signal.connectSlot(&callback_12);
+    signal.connectSlot(&callback_13);
+
+    auto ptr = std::make_unique<int>(5);
+    std::vector<int> actual_results = signal.emitSignal(std::move(ptr));
+
+    //std::vector<int> expect = {1, 2, 3};
+
+    //EXPECT_EQ(actual_results, expect);
+}
+
+
+TEST(noCopy, OutputTypeLastCombiner)
+{
+    sig::Signal<std::unique_ptr<int>(), sig::LastCombiner<std::unique_ptr<int>>> signal;
+    signal.connectSlot(&callback_10);
+    signal.connectSlot(&callback_11);
+
+    std::vector<std::unique_ptr<int>> expect;
+    expect.push_back(std::make_unique<int>(10));
+    expect.push_back(std::make_unique<int>(11));
+    std::unique_ptr<int> actual_results = signal.emitSignal();
+
+    EXPECT_EQ(*actual_results.get(), *expect[1].get());
+}
+
+/*TEST(noCopy, InputTypeVectorCombiner)
+{
+    sig::Signal<int(std::unique_ptr<int>), sig::VectorCombiner<int>> signal;
+    signal.connectSlot(&callback_12);
+    signal.connectSlot(&callback_13);
+
+    auto ptr = std::make_unique<int>(5);
+
+    std::vector<int> expect = {1, 2, 3};
+    std::vector<int> actual_results = signal.emitSignal(ptr);
+
+    EXPECT_EQ(actual_results, expect);
+}*/
+
+//no-copy void
 
 
 void print(int x) {
@@ -486,9 +590,9 @@ TEST(VectorCombiner, test)
 
 
 
+//Eviter copie item (test uniptr)
 
-
-
+//passer int a fonction long
 //tester avec fonction qui renvoie mauvais trucs
 //test différents signaux en meme temps
 //différentes args 
@@ -499,7 +603,19 @@ TEST(VectorCombiner, test)
 //doit-on faire un destructeur ?
 
 
+/**
+ * passing pointer test
+*/
 
+
+/**
+ * Priority of slots test
+*/
+
+
+
+
+//tests multiple et bon ordre
 
 
 int main(int argc, char* argv[]) {
