@@ -6,9 +6,6 @@
 #include <map>
 #include <vector>
 
-#include <cstdio> //To remove
-
-
 namespace sig
 {
 	/*******************************************************************************
@@ -28,7 +25,7 @@ namespace sig
 
 		result_type result()
 		{
-			return result_type();// do nothing
+			// do nothing
 		}
 	};
 
@@ -37,33 +34,8 @@ namespace sig
 	 *******************************************************************************/
 
 	template <typename T>
-	class LastCombiner
+	class LastCombinerBase
 	{
-	public:
-		using result_type = T;
-
-		template <typename U>
-		void combine(U item)
-		{
-			m_lastResult = std::move(item);
-		}
-
-		result_type result()
-		{
-			return std::move(m_lastResult);
-		}
-
-	private:
-		result_type m_lastResult;
-	};
-
-	//type void
-	template <>
-	class LastCombiner<void>
-	{
-	public:
-		using result_type = void;
-
 		template <typename U>
 		void combine(U item)
 		{
@@ -72,17 +44,61 @@ namespace sig
 
 		void result()
 		{
-			return result_type();// do nothing
+			// do nothing
 		}
 	};
 
+	template <typename T>
+	class LastCombiner : public LastCombinerBase<T>
+	{
+	public:
+		using result_type = T;
+
+		template <typename U>
+		void combine(U item)
+		{
+			m_lastResult = std::forward<U>(item);
+		}
+
+		result_type result()
+		{
+			return std::move(m_lastResult);
+		}
+
+
+	private:
+		result_type m_lastResult;
+	};
+
+	// type void
+	template <>
+	class LastCombiner<void> : public LastCombinerBase<void>
+	{
+	public:
+		using result_type = void;
+	};
 
 	/*******************************************************************************
 	 *                               VectorCombiner
 	 *******************************************************************************/
-	//faire class pour faire heritage
 	template <typename T>
-	class VectorCombiner
+	class VectorCombinerBase
+	{
+		template <typename U>
+		void combine(U item)
+		{
+			// do nothing
+		}
+
+		void result()
+		{
+			// do nothing
+		}
+	};
+
+	// faire class pour faire heritage
+	template <typename T>
+	class VectorCombiner : public VectorCombinerBase<T>
 	{
 	public:
 		using result_type = std::vector<T>;
@@ -102,25 +118,13 @@ namespace sig
 		result_type m_all_results;
 	};
 
-	//type void
+	// type void
 	template <>
-	class VectorCombiner<void>
+	class VectorCombiner<void> : public VectorCombinerBase<void>
 	{
 	public:
 		using result_type = void;
-
-		template <typename T>
-		void combine(T item)
-		{
-			// do nothing
-		}
-
-		result_type result()
-		{
-			return result_type();// do nothing
-		}
 	};
-
 
 	/*******************************************************************************
 	 *                               Signal
@@ -142,13 +146,11 @@ namespace sig
 			: m_combiner(std::move(combiner)), m_id(0)
 		{
 		}
-		
+
 		std::size_t connectSlot(std::function<signature_type> callback)
 		{
 			std::size_t id = m_id;
-			fprintf(stderr,"connectSlot : %ld\n",id);
 			m_slots.emplace(id, callback);
-			/*m_slots[id] = callback;*/
 			m_id++;
 			return id;
 		}
@@ -157,50 +159,28 @@ namespace sig
 		{
 			m_slots.erase(id);
 		}
-		
-		/*template <typename U = Combiner>
-		std::enable_if_t<!std::is_same_v<U, Combiner>, typename Combiner::result_type> emitSignal(Args... args)
+
+		result_type emitSignal(Args... args)
 		{
-			typename Combiner::result_type result = m_combiner.result();
-			for (auto& slot : m_slots)
+			if constexpr (std::is_void_v<result_type>)
 			{
-				fprintf(stderr,"emitSignal : %ld\n",result);
-				result = m_combiner.combine(result, slot.second(args...));
+				// code si retourne void
+				for (auto &slot : m_slots)
+				{
+					slot.second(std::forward<Args>(args)...);
+				}
 			}
-			return result;
-		}
-
-		template <typename U = Combiner>
-		std::enable_if_t<std::is_same_v<U, DiscardCombiner>, void> emitSignal(Args... args)
-		{
-			
-			//constexpr if(is_void()==)
-			for (auto& slot : m_slots)
+			if constexpr (!std::is_void_v<result_type>)
 			{
-				fprintf(stderr,"laaa\n");
-				//fprintf(stderr,"emitSignal void : %ld\n",id);
-				slot.second(args...);
-			}
-		}*/
 
-		result_type emitSignal(Args... args) {
-		if constexpr (std::is_void_v<result_type>) {
-			// code si retourne void
-			for (auto& slot : m_slots) {
-				slot.second(args...);
+				// code si ne retourne pas void
+				for (auto &slot : m_slots)
+				{
+					m_combiner.combine(slot.second(std::forward<Args>(args)...));
+				}
+				return m_combiner.result();
 			}
 		}
-		if constexpr (!std::is_void_v<result_type>) {
-			
-			// code si ne retourne pas void
-			for (auto& slot : m_slots) {
-				m_combiner.combine(slot.second(std::forward<Args>(args)...));
-			}
-			return m_combiner.result();
-		}
-	}
-
-
 
 	private:
 		combiner_type m_combiner;
