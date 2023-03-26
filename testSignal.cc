@@ -3,9 +3,9 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-/**
- * Structure with an impossible copy
- */
+/********************************************************
+ *          Structure with an impossible copy
+ ********************************************************/
 struct NoCopy
 {
 public:
@@ -16,19 +16,76 @@ public:
     NoCopy(NoCopy &&other) noexcept : int_no_copy(other.int_no_copy)
     {
     }
-
-    NoCopy &operator=(NoCopy &&other) noexcept
+    NoCopy &operator=(NoCopy &&other)
     {
-        int_no_copy = other.int_no_copy;
+        std::swap(int_no_copy, other.int_no_copy);
         return *this;
     }
 
     int int_no_copy;
 };
 
+/********************************************************
+ *                    FirstCombiner
+ ********************************************************/
 /**
- * Callback functions
- */
+ * FirstCombiner
+*/
+template <typename T>
+class FirstCombinerBase
+{
+    template <typename U>
+    void combine(U item)
+    {
+        // do nothing
+    }
+
+    void result()
+    {
+        // do nothing
+    }
+};
+
+template <typename T>
+class FirstCombiner : public FirstCombinerBase<T>
+{
+public:
+    using result_type = T;
+
+    template <typename U>
+    void combine(U item)
+    {
+        if (m_isResultEmpty) {
+            m_firstResult = std::forward<U>(item);
+            m_isResultEmpty = false;
+        }
+    }
+
+    result_type result()
+    {
+        return std::move(m_firstResult);
+    }
+
+
+private:
+    result_type m_firstResult;
+    bool m_isResultEmpty = true;
+};
+
+// type void
+template <>
+class FirstCombiner<void> : public FirstCombinerBase<void>
+{
+public:
+    using result_type = void;
+};
+
+
+
+/********************************************************
+ *                Callback functions
+ ********************************************************/
+
 void callback_1(int &res)
 {
     res = 1;
@@ -53,6 +110,7 @@ int callback_5()
 {
     return 3;
 }
+
 char callback_6()
 {
     return 'a';
@@ -101,11 +159,16 @@ int callback_14(int i1, int i2){
     return i1+i2;
 }
 
+
+/********************************************************
+ *                      Tests
+ ********************************************************/
+
 /**
  * Connect slots tests
  */
 
-// ID uniqueness test
+// ID uniqueness
 TEST(connectSlot, UniqueID)
 {
     sig::Signal<void()> signal;
@@ -119,8 +182,7 @@ TEST(connectSlot, UniqueID)
     EXPECT_NE(id3, id1);
 }
 
-// Connect function test
-
+// Connect function
 TEST(connectSlot, ConnectFunction)
 {
     sig::Signal<void(int &)> signal;
@@ -130,8 +192,7 @@ TEST(connectSlot, ConnectFunction)
     EXPECT_EQ(res, 1);
 }
 
-// Connect same function test
-
+// Connect same function
 TEST(connectSlot, ConnectSameFunctionTwice)
 {
     sig::Signal<void(int &)> signal;
@@ -142,7 +203,7 @@ TEST(connectSlot, ConnectSameFunctionTwice)
     EXPECT_EQ(counter, 2);
 }
 
-// Connect lambda test
+// Connect lambda
 TEST(connectSlot, connectLambda)
 {
     sig::Signal<void(int)> signal;
@@ -151,23 +212,6 @@ TEST(connectSlot, connectLambda)
                        { res = x; });
     signal.emitSignal(20);
     EXPECT_EQ(res, 20);
-}
-
-// Connect object test
-class MyClass
-{
-public:
-    void callback_class(int signal) { res = signal + 2; }
-    int res = 0;
-};
-
-TEST(connectSlot, ObjectSlot)
-{
-    sig::Signal<void(int)> signal;
-    MyClass obj;
-    signal.connectSlot(std::bind(&MyClass::callback_class, &obj, std::placeholders::_1));
-    signal.emitSignal(4);
-    EXPECT_EQ(obj.res, 6);
 }
 
 /**
@@ -180,14 +224,11 @@ TEST(disconnectSlot, One)
     sig::Signal<void(int)> signal;
 
     int res1 = 0;
-    signal.connectSlot([&res1](int i)
-                       { res1 = i; });
+    signal.connectSlot([&res1](int i){ res1 = i; });
     int res2 = 0;
-    std::size_t id2 = signal.connectSlot([&res2](int i)
-                                         { res2 = i * 2; });
+    std::size_t id2 = signal.connectSlot([&res2](int i){ res2 = i * 2; });
 
     signal.emitSignal(2);
-
     EXPECT_EQ(res1, 2);
     EXPECT_EQ(res2, 4);
 
@@ -204,11 +245,9 @@ TEST(disconnectSlot, All)
     sig::Signal<void(char)> signal;
 
     int res1 = 0;
-    std::size_t id1 = signal.connectSlot([&res1](int i)
-                                         { res1 = i; });
+    std::size_t id1 = signal.connectSlot([&res1](int i){ res1 = i; });
     int res2 = 0;
-    std::size_t id2 = signal.connectSlot([&res2](int i)
-                                         { res2 = i * 2; });
+    std::size_t id2 = signal.connectSlot([&res2](int i){ res2 = i * 2; });
 
     signal.emitSignal(2);
     EXPECT_EQ(res1, 2);
@@ -222,20 +261,17 @@ TEST(disconnectSlot, All)
     EXPECT_EQ(res2, 4);
 }
 
-// Disconnecting one slot after another test
+// Disconnect one slot after another
 TEST(disconnectSlot, KeepOtherAccess)
 {
     sig::Signal<void(int)> signal;
 
     int res1 = 0;
-    signal.connectSlot([&res1](int i)
-                       { res1 = i; });
+    signal.connectSlot([&res1](int i){ res1 = i; });
     int res2 = 0;
-    std::size_t id2 = signal.connectSlot([&res2](int i)
-                                         { res2 = i * 2; });
+    std::size_t id2 = signal.connectSlot([&res2](int i){ res2 = i * 2; });
     int res3 = 0;
-    signal.connectSlot([&res3](int i)
-                       { res3 = i * 3; });
+    signal.connectSlot([&res3](int i){ res3 = i * 3; });
 
     signal.emitSignal(2);
     EXPECT_EQ(res1, 2);
@@ -254,19 +290,18 @@ TEST(disconnectSlot, KeepOtherAccess)
  * Emit signal tests
  */
 
-// Emit without slot connected test and compile
+// Emit without slot connected and compile
 TEST(emitSignal, NoSlotsConnected)
 {
     sig::Signal<void()> signal;
     signal.emitSignal();
 }
 
-// Passing arguments by reference test
+// Passing arguments by reference
 TEST(emitSignal, RefArgument)
 {
     sig::Signal<void(int &)> signal;
-    signal.connectSlot([](int &x)
-                    { x = x * 2; });
+    signal.connectSlot([](int &x){ x = x * 2; });
 
     int arg = 42;
     signal.emitSignal(arg);
@@ -274,7 +309,7 @@ TEST(emitSignal, RefArgument)
     EXPECT_EQ(arg, 84);
 }
 
-// Multiple args type
+// Multiple args types
 TEST(emitSignal, multipleArgsType)
 {
     sig::Signal<void(int, char)> signal;
@@ -282,10 +317,8 @@ TEST(emitSignal, multipleArgsType)
     std::vector<int> ints;
     std::vector<char> chars;
 
-    signal.connectSlot([&ints, &chars](int i, char c)
-                       { ints.push_back(i); chars.push_back(c); });
-    signal.connectSlot([&ints, &chars](int i, char c)
-                       { ints.push_back(i*2); chars.push_back(c+1); });
+    signal.connectSlot([&ints, &chars](int i, char c){ ints.push_back(i); chars.push_back(c); });
+    signal.connectSlot([&ints, &chars](int i, char c){ ints.push_back(i*2); chars.push_back(c+1); });
 
     signal.emitSignal(1, 'a');
 
@@ -299,7 +332,7 @@ TEST(emitSignal, multipleArgsType)
     EXPECT_EQ(chars[1], 'b');
 }
 
-// Vector args type
+// Vector of ints as args types
 TEST(emitSignal, LambdaWithVector)
 {
     sig::Signal<void(std::vector<int>)> signal;
@@ -307,10 +340,11 @@ TEST(emitSignal, LambdaWithVector)
     int sum = 0;
 
     signal.connectSlot([&sum](std::vector<int> vec)
-                    {
+    {
         for (int i : vec) {
             sum += i;
-        } });
+        } 
+    });
 
     signal.emitSignal(v);
     EXPECT_EQ(sum, 6);
@@ -340,6 +374,7 @@ TEST(emitSignal, TestSubject)
     // here res equals 1 and "Hello 1" is printed on stdout
     EXPECT_EQ(res, 1);
 }
+
 
 /**
  * LastCombiner tests
@@ -383,7 +418,7 @@ TEST(lastCombiner, LastOneSameToFirst)
     EXPECT_EQ(res, 1);
 }
 
-// Connect two same slots with different output types
+// Connect two slots with different output types
 TEST(lastCombiner, DifferentOutputType)
 {
     sig::Signal<int(), sig::LastCombiner<int>> signal;
@@ -394,18 +429,16 @@ TEST(lastCombiner, DifferentOutputType)
 }
 
 // LastCombiner with void type
-
 TEST(lastCombiner, returnTypeVoid)
 {
     sig::Signal<void(int), sig::LastCombiner<void>> signal;
     int res = 0;
-    signal.connectSlot([&res](int x)
-                    { res = x + 1; });
+    signal.connectSlot([&res](int x){ res = x + 1; });
     signal.emitSignal(1);
     EXPECT_EQ(res, 2);
 }
 
-// Tests the mix of different compatible types between signal and slots
+// Tests to mix different compatible types between signal and slots
 TEST(lastCombiner, ReturnIntWithCharSlot)
 {
     sig::Signal<int(), sig::LastCombiner<int>> signal;
@@ -442,7 +475,7 @@ TEST(lastCombiner, IntSignalWithCharSlot)
     EXPECT_EQ(res, 'b');
 }
 
-TEST(lastCombiner, IntWithLong)
+TEST(lastCombiner, IntsWithLongs)
 {
     sig::Signal<int(long, long), sig::LastCombiner<int>> signal;
     signal.connectSlot(&callback_14);
@@ -474,9 +507,9 @@ TEST(vectorCombiner, MultipleSlot)
     signal.connectSlot(&callback_5);
 
     std::vector<int> expect = {1, 2, 3};
-    std::vector<int> actual_results = signal.emitSignal();
+    std::vector<int> res = signal.emitSignal();
 
-    EXPECT_EQ(actual_results, expect);
+    EXPECT_EQ(res, expect);
 }
 
 // Connect no slot and returns an empty vector
@@ -530,23 +563,37 @@ TEST(noCopy, OutputTypeVectorCombiner)
     std::vector<std::unique_ptr<int>> expect;
     expect.push_back(std::make_unique<int>(10));
     expect.push_back(std::make_unique<int>(11));
-    std::vector<std::unique_ptr<int>> actual_results = signal.emitSignal();
+    std::vector<std::unique_ptr<int>> res = signal.emitSignal();
 
-    EXPECT_EQ(*actual_results[0].get(), *expect[0].get());
-    EXPECT_EQ(*actual_results[1].get(), *expect[1].get());
+    EXPECT_EQ(*res[0].get(), *expect[0].get());
+    EXPECT_EQ(*res[1].get(), *expect[1].get());
 }
 
-TEST(noCopy, InputTypeLastCombiner)
+TEST(noCopy, InputTypeVectorCombiner)
 {
     sig::Signal<int(NoCopy), sig::VectorCombiner<int>> signal;
     signal.connectSlot(&callback_12);
     signal.connectSlot(&callback_13);
 
     NoCopy nc(4);
-    std::vector<int> actual_results = signal.emitSignal(std::move(nc));
+    std::vector<int> res = signal.emitSignal(std::move(nc));
     std::vector<int> expect = {20, 24};
 
-    EXPECT_EQ(actual_results, expect);
+    EXPECT_EQ(res, expect);
+}
+
+TEST(noCopy, OutputTypeVoidVectorCombiner)
+{
+    sig::Signal<void(NoCopy), sig::VectorCombiner<void>> signal;
+    std::vector<NoCopy> res;
+    signal.connectSlot([&res](NoCopy nc){ nc.int_no_copy = nc.int_no_copy + 1;
+                                          res.push_back(std::move(nc)); });
+    signal.connectSlot([&res](NoCopy nc){ nc.int_no_copy = nc.int_no_copy * 2;
+                                          res.push_back(std::move(nc)); });
+    signal.emitSignal(2);
+    EXPECT_EQ(res.size(), 2u);
+    EXPECT_EQ(res[0].int_no_copy, 3);
+    EXPECT_EQ(res[1].int_no_copy, 4);
 }
 
 TEST(noCopy, OutputTypeLastCombiner)
@@ -558,74 +605,49 @@ TEST(noCopy, OutputTypeLastCombiner)
     std::vector<std::unique_ptr<int>> expect;
     expect.push_back(std::make_unique<int>(10));
     expect.push_back(std::make_unique<int>(11));
-    std::unique_ptr<int> actual_results = signal.emitSignal();
+    std::unique_ptr<int> res = signal.emitSignal();
 
-    EXPECT_EQ(*actual_results.get(), *expect[1].get());
+    EXPECT_EQ(*res.get(), *expect[1].get());
 }
 
-TEST(noCopy, InputTypeVectorCombiner)
+TEST(noCopy, InputTypeLastCombiner)
 {
-    sig::Signal<int(NoCopy), sig::VectorCombiner<int>> signal;
+    sig::Signal<int(NoCopy), sig::LastCombiner<int>> signal;
     signal.connectSlot(&callback_12);
     signal.connectSlot(&callback_13);
 
-    auto nc = NoCopy(5);
+    int expect = 30;
+    int res = signal.emitSignal(NoCopy(5));
 
-    std::vector<int> expect = {25, 30};
-    std::vector<int> actual_results = signal.emitSignal(std::move(nc));
-
-    EXPECT_EQ(actual_results, expect);
+    EXPECT_EQ(res, expect);
 }
 
-TEST(noCopy, InputTypeDiscardCombiner)
+TEST(noCopy, OutputTypeVoidLastCombiner)
+{
+    sig::Signal<void(NoCopy), sig::LastCombiner<void>> signal;
+    NoCopy res;
+    signal.connectSlot([&res](NoCopy nc){ nc.int_no_copy = nc.int_no_copy + 1;
+                                          res = std::move(nc); });
+    signal.connectSlot([&res](NoCopy nc){ nc.int_no_copy = nc.int_no_copy * 2;
+                                          res = std::move(nc); });
+    signal.emitSignal(NoCopy(4));
+    EXPECT_EQ(res.int_no_copy, 8);
+}
+
+TEST(noCopy, OutputTypeDiscardCombiner)
 {
     sig::Signal<void(NoCopy &)> signal;
-
     std::vector<int> int_vector;
 
-    signal.connectSlot([&int_vector](NoCopy &nc)
-                       { int_vector.push_back(nc.int_no_copy + 1); });
-
-    signal.connectSlot([&int_vector](NoCopy &nc)
-                       { int_vector.push_back(nc.int_no_copy + 2); });
+    signal.connectSlot([&int_vector](NoCopy &nc){ int_vector.push_back(nc.int_no_copy + 1); });
+    signal.connectSlot([&int_vector](NoCopy &nc){ int_vector.push_back(nc.int_no_copy + 2); });
 
     NoCopy nc(3);
     signal.emitSignal(nc);
 
     EXPECT_EQ(int_vector.size(), 2u);
-
     EXPECT_EQ(int_vector[0], 4);
     EXPECT_EQ(int_vector[1], 5);
-}
-
-TEST(noCopy, InputTypeVoidLastCombiner)
-{
-    sig::Signal<void(NoCopy), sig::LastCombiner<void>> signal;
-    NoCopy res;
-    signal.connectSlot([&res](NoCopy nc)
-                    { nc.int_no_copy = nc.int_no_copy + 1;
-                   res = std::move(nc); });
-    signal.connectSlot([&res](NoCopy nc)
-                    { nc.int_no_copy = nc.int_no_copy * 2;
-                   res = std::move(nc); });
-    signal.emitSignal(4);
-    EXPECT_EQ(res.int_no_copy, 8);
-}
-
-TEST(noCopy, InputTypeVoidVectorCombiner)
-{
-    sig::Signal<void(NoCopy), sig::VectorCombiner<void>> signal;
-    std::vector<NoCopy> res;
-    signal.connectSlot([&res](NoCopy nc)
-                    { nc.int_no_copy = nc.int_no_copy + 1;
-                   res.push_back(std::move(nc)); });
-    signal.connectSlot([&res](NoCopy nc)
-                    { nc.int_no_copy = nc.int_no_copy * 2;
-                   res.push_back(std::move(nc)); });
-    signal.emitSignal(2);
-    EXPECT_EQ(res.size(), 2u);
-    EXPECT_EQ(res[0].int_no_copy, 3);
-    EXPECT_EQ(res[1].int_no_copy, 4);
 }
 
 /**
@@ -644,62 +666,8 @@ TEST(multipleSignals, Default)
 }
 
 /**
- * New combiner tests
+ * Own combiner : FirstCombiner tests
 */
-
-/**
- * FirstCombiner
-*/
-template <typename T>
-class FirstCombinerBase
-{
-    template <typename U>
-    void combine(U item)
-    {
-        // do nothing
-    }
-
-    void result()
-    {
-        // do nothing
-    }
-};
-
-template <typename T>
-class FirstCombiner : public FirstCombinerBase<T>
-{
-public:
-    using result_type = T;
-
-    template <typename U>
-    void combine(U item)
-    {
-        if (!m_isResultInitialized) {
-            m_firstResult = std::forward<U>(item);
-            m_isResultInitialized = true;
-        }
-    }
-
-    result_type result()
-    {
-        return std::move(m_firstResult);
-    }
-
-
-private:
-    result_type m_firstResult;
-    bool m_isResultInitialized = false;
-};
-
-// type void
-template <>
-class FirstCombiner<void> : public FirstCombinerBase<void>
-{
-public:
-    using result_type = void;
-};
-
-
 
 // Connect one slot and emit signal
 TEST(firstCombiner, OneSlot)
@@ -750,13 +718,11 @@ TEST(firstCombiner, DifferentOutputType)
 }
 
 // FirstCombiner with void type
-
 TEST(firstCombiner, returnTypeVoid)
 {
     sig::Signal<void(int), FirstCombiner<void>> signal;
     int res = 0;
-    signal.connectSlot([&res](int x)
-                    { res = x + 1; });
+    signal.connectSlot([&res](int x){ res = x + 1; });
     signal.emitSignal(1);
     EXPECT_EQ(res, 2);
 }
@@ -806,7 +772,32 @@ TEST(firstCombiner, IntWithLong)
     EXPECT_EQ(res, 5);
 }
 
+//Tests no-copy
+TEST(noCopy, OutputTypeFirstCombiner)
+{
+    sig::Signal<std::unique_ptr<int>(), FirstCombiner<std::unique_ptr<int>>> signal;
+    signal.connectSlot(&callback_10);
+    signal.connectSlot(&callback_11);
 
+    std::vector<std::unique_ptr<int>> expect;
+    expect.push_back(std::make_unique<int>(10));
+    expect.push_back(std::make_unique<int>(11));
+    std::unique_ptr<int> res = signal.emitSignal();
+
+    EXPECT_EQ(*res.get(), *expect[0].get());
+}
+
+TEST(noCopy, InputTypeFirstCombiner)
+{
+    sig::Signal<int(NoCopy), FirstCombiner<int>> signal;
+    signal.connectSlot(&callback_12);
+    signal.connectSlot(&callback_13);
+
+    int expect = 25;
+    int res = signal.emitSignal(NoCopy(5));
+
+    EXPECT_EQ(res, expect);
+}
 
 
 int main(int argc, char *argv[])

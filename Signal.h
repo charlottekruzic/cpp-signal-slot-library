@@ -1,7 +1,6 @@
 #ifndef SIGNAL_H
 #define SIGNAL_H
 
-#include <optional>
 #include <functional>
 #include <map>
 #include <vector>
@@ -65,12 +64,10 @@ namespace sig
 			return std::move(m_lastResult);
 		}
 
-
 	private:
 		result_type m_lastResult;
 	};
 
-	// type void
 	template <>
 	class LastCombiner<void> : public LastCombinerBase<void>
 	{
@@ -96,7 +93,6 @@ namespace sig
 		}
 	};
 
-	// faire class pour faire heritage
 	template <typename T>
 	class VectorCombiner : public VectorCombinerBase<T>
 	{
@@ -164,16 +160,13 @@ namespace sig
 		{
 			if constexpr (std::is_void_v<result_type>)
 			{
-				// code si retourne void
 				for (auto &slot : m_slots)
 				{
 					slot.second(std::forward<Args>(args)...);
 				}
 			}
-			if constexpr (!std::is_void_v<result_type>)
+			else
 			{
-
-				// code si ne retourne pas void
 				for (auto &slot : m_slots)
 				{
 					m_combiner.combine(slot.second(std::forward<Args>(args)...));
