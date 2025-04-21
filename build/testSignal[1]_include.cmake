@@ -1,5 +1,0 @@
-if(EXISTS "/home/charlotte/Bureau/TP PMP/tp3/sig/build/testSignal[1]_tests.cmake")
-  include("/home/charlotte/Bureau/TP PMP/tp3/sig/build/testSignal[1]_tests.cmake")
-else()
-  add_test(testSignal_NOT_BUILT testSignal_NOT_BUILT)
-endif()
