@@ -20,7 +20,7 @@ Signal is a lightweight C++ library that implements a signal-slot mechanism with
 ## Build Instructions
 1. Clone the repository
     ```bash
-    git clone https://github.com/yourusername/signal-library.git
+    git clone https://github.com/charlottekruzic/cpp-signal-slot-library.git
     ```
 2. Create a build directory
     ```bash
