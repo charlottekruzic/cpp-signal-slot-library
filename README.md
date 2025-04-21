@@ -45,3 +45,5 @@ When all tests pass, you should see output similar to:
 [  PASSED  ] 49 tests.
 ```
 
+## Project assignment
+This project is part of the third-year Bachelor's degree in Computer Science at the University of Franche-Comté.
