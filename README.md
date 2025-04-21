@@ -1,4 +1,4 @@
-# Signal - Library for C++ signal-slot system with customizable result combiners
+# Signal - Library for C++ signal-slot system
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
 Signal is a lightweight C++ library that implements a signal-slot mechanism with customizable result combiners. It allows connecting slots (callback functions) to signals, emitting those signals, and combining their results using different combiner strategies.
